@@ -1,5 +1,12 @@
+import 'dart:developer';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:schedular_app/appt_model.dart';
+
+final appt_db = FirebaseFirestore.instance; //Initialize firestore
 
 class UserHomePage extends StatefulWidget {
   const UserHomePage({super.key});
@@ -16,17 +23,6 @@ class _UserHomePageState extends State<UserHomePage> {
   final _serviceList = ["Haircut", "Massage", "Manicure", "Pedicure"];
 
   final _nameController = TextEditingController();
-
-  /* showDatePicker(
-          context: context,
-          initialDate: DateTime.now(),
-          lastDate: DateTime(2022, 12),
-          firstDate: DateTime.now()); */
-
-  /*     if (selectedDate != null && selectedDate != date) {
-        setState(() {
-          date = selectedDate;
-        }); */
 
   @override
   Widget build(BuildContext context) {
@@ -61,12 +57,14 @@ class _UserHomePageState extends State<UserHomePage> {
           icon: const Icon(Icons.arrow_drop_down),
           iconSize: 28,
           hint: const Text("Select Service"),
+          disabledHint: const Text("Select Service"),
           underline: const SizedBox(),
           isExpanded: true,
           value: _service,
           onChanged: (newValue) {
+
             setState(() {
-              _service = newValue.toString();
+              _service = newValue.toString().toLowerCase();
             });
           },
           items: _serviceList.map((valueItem) {
@@ -78,8 +76,10 @@ class _UserHomePageState extends State<UserHomePage> {
 
     final datePicker = Visibility(
       visible: showDate,
-      child: Expanded(
+      child: SizedBox(
+        height: 220.0,
         child: CupertinoDatePicker(
+          minimumDate: DateTime.now(),
             onDateTimeChanged: ((value) => setState(() {
                   date = value;
                 }))),
@@ -87,7 +87,6 @@ class _UserHomePageState extends State<UserHomePage> {
     );
 
     final selectedDateAndTime = Column(
-      mainAxisSize: MainAxisSize.max,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -139,7 +138,19 @@ class _UserHomePageState extends State<UserHomePage> {
         color: Colors.green,
         child: MaterialButton(
           minWidth: MediaQuery.of(context).size.width,
-          onPressed: () {},
+          onPressed: () {
+            if (_nameController.text.isNotEmpty && _service != null) {
+              bookSession(
+                  name: _nameController.text, service: _service, time: date);
+
+              setState(() {
+                _nameController.clear();
+                _service = null;
+              });
+            } else {
+              log("Please enter all fields!");
+            }
+          },
           child: const Text(
             "Book",
             style: TextStyle(color: Colors.white),
@@ -147,28 +158,37 @@ class _UserHomePageState extends State<UserHomePage> {
         ));
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(title: const Text("FCM USER")),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
-        child: Form(
-            child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            textField,
-            const SizedBox(height: 30.0),
-            serviceDropDown,
-            const SizedBox(height: 30.0),
-            selectedDateAndTime,
-            datePicker,
-            btnShowDate,
-            const SizedBox(height: 60.0),
-            btnSubmit,
-            const SizedBox(height: 30.0),
-          ],
-        )),
+        child: SingleChildScrollView(
+          child: Column(
+            // mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              textField,
+              const SizedBox(height: 30.0),
+              serviceDropDown,
+              const SizedBox(height: 30.0),
+              selectedDateAndTime,
+              datePicker,
+              btnShowDate,
+              const SizedBox(height: 60.0),
+              btnSubmit,
+              const SizedBox(height: 30.0),
+            ],
+          ),
+        ),
       ),
     );
   }
+}
+
+bookSession({name, service, time}) async {
+  Appointment appt = Appointment(name: name, time: time, service: service);
+  await appt_db.collection('appointments').add(appt.toJson());
+
+  log("Appointment Booked Successfully!");
 }
