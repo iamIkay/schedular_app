@@ -65,14 +65,13 @@ class Schedule extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-        height: 400.0,
+    return Padding(
         padding: const EdgeInsets.only(bottom: 20.0),
         child: StreamBuilder(
           stream: getAppointments(),
           builder: ((context, AsyncSnapshot<QuerySnapshot> snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return CircularProgressIndicator();
+              return const CircularProgressIndicator();
             }
 
             if (snapshot.hasData) {
@@ -82,11 +81,15 @@ class Schedule extends StatelessWidget {
                 appts.add(
                     Appointment.fromJson(doc.data() as Map<String, dynamic>));
               }
-              return ListView.builder(
-                itemCount: appts.length,
-                itemBuilder: (context, index) {
-                  return ScheduleCard(appts[index]);
-                },
+              return SizedBox(
+                height: 300.0,
+                child: ListView.builder(
+                  physics: NeverScrollableScrollPhysics(),
+                  itemCount: appts.length,
+                  itemBuilder: (context, index) {
+                    return ScheduleCard(appts[index]);
+                  },
+                ),
               );
             }
 
