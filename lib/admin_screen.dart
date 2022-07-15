@@ -1,6 +1,12 @@
+import 'dart:developer';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import 'appt_model.dart';
+
+//List<Appointment> appts = [];
+final db = FirebaseFirestore.instance;
 
 class AdminHomePage extends StatelessWidget {
   const AdminHomePage({super.key});
@@ -19,11 +25,13 @@ class AdminHomePage extends StatelessWidget {
             const SizedBox(height: 30.0),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children:  [
-               const Text("Today:"),
+              children: [
+                const Text("Today:"),
                 TextButton(
                     child: const Text("View all",
-                        style: TextStyle(decoration: TextDecoration.underline, color: Colors.grey)),
+                        style: TextStyle(
+                            decoration: TextDecoration.underline,
+                            color: Colors.grey)),
                     onPressed: () {}),
               ],
             ),
@@ -57,35 +65,47 @@ class Schedule extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final appointments = [
-      Appointment(
-          name: "Mark", date: "2022-12-31", time: "12:30", service: "haircut"),
-      Appointment(
-          name: "Mark Odogwu Abulori",
-          date: "2022-12-31",
-          time: "12:30",
-          service: "massage"),
-      Appointment(
-          name: "Mercy Adibe",
-          date: "2022-12-31",
-          time: "12:30",
-          service: "manicure"),
-      Appointment(
-          name: "Mark", date: "2022-12-31", time: "12:30", service: "massage"),
-      Appointment(
-          name: "Mark", date: "2022-12-31", time: "12:30", service: "haircut"),
-    ];
     return Container(
-      height: 400.0,
-      padding: const EdgeInsets.only(bottom: 20.0),
-      child: ListView.builder(
-        itemCount: 5,
+        height: 400.0,
+        padding: const EdgeInsets.only(bottom: 20.0),
+        child: StreamBuilder(
+          stream: getAppointments(),
+          builder: ((context, AsyncSnapshot<QuerySnapshot> snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return CircularProgressIndicator();
+            }
+
+            if (snapshot.hasData) {
+              List<Appointment> appts = [];
+
+              for (var doc in snapshot.data!.docs) {
+                appts.add(
+                    Appointment.fromJson(doc.data() as Map<String, dynamic>));
+              }
+              return ListView.builder(
+                itemCount: appts.length,
+                itemBuilder: (context, index) {
+                  return ScheduleCard(appts[index]);
+                },
+              );
+            }
+
+            return SizedBox();
+          }),
+        )
+
+        /*  ListView.builder(
+        itemCount: appts.length,
         itemBuilder: (context, index) {
-          return ScheduleCard(appointments[index]);
+          return ScheduleCard(appts[index]);
         },
-      ),
-    );
+      ), */
+        );
   }
+}
+
+Stream<QuerySnapshot> getAppointments() {
+  return db.collection('appointments').orderBy('time').snapshots();
 }
 
 class ScheduleCard extends StatelessWidget {
@@ -112,7 +132,7 @@ class ScheduleCard extends StatelessWidget {
     }
     return Container(
       height: 50.0,
-      color: cardColor.withOpacity(0.4),
+      color: cardColor.withOpacity(0.5),
       margin: const EdgeInsets.only(bottom: 10.0),
       child: Card(
         elevation: 10.0,
@@ -123,13 +143,43 @@ class ScheduleCard extends StatelessWidget {
             SizedBox(
                 width: 100.0,
                 child: Text(appointment.name, overflow: TextOverflow.ellipsis)),
-            Text(appointment.date),
-            Text(appointment.time)
+            Text(checkDate("${appointment.time.toLocal()}".split(' ')[0])),
+            Row(
+              children: [
+                Text("${appointment.time.toLocal()}"
+                    .split(' ')[1]
+                    .split(':')[0]),
+                const Text(':'),
+                Text("${appointment.time.toLocal()}"
+                    .split(' ')[1]
+                    .split(':')[1]),
+              ],
+            ),
           ]),
         ),
       ),
     );
   }
+}
+
+checkDate(date) {
+  DateTime now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final tomorrow = DateTime(now.year, now.month, now.day+1);
+
+  DateTime dateConvert = DateTime.parse(date);
+  final checkDate =
+      DateTime(dateConvert.year, dateConvert.month, dateConvert.day);
+
+  if (checkDate == today) {
+    return "Today";
+  }
+
+  if (checkDate == tomorrow) {
+    return "Tomorrow";
+  }
+
+  return date;
 }
 
 class ColorIdentifier extends StatelessWidget {
@@ -146,7 +196,7 @@ class ColorIdentifier extends StatelessWidget {
           Container(
             height: 30,
             width: 30,
-            color: color.withOpacity(0.4),
+            color: color.withOpacity(0.5),
           ),
           const SizedBox(width: 20.0),
           Text(service)
