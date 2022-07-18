@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'admin_screen.dart';
-import 'home_page.dart';
+import 'main.dart';
+import 'user_screen.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -9,46 +10,52 @@ class LoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("FCM LOGIN")),
+      appBar: AppBar(centerTitle: true, title: const Text("FCM LOGIN")),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20.0),
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           const Text(
             "Who are you?",
-            style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 24.0),
           ),
           const SizedBox(height: 30.0),
-          Material(
-              elevation: 5.0,
-              borderRadius: BorderRadius.circular(15),
-              color: Colors.black45,
-              child: MaterialButton(
-                minWidth: MediaQuery.of(context).size.width,
-                onPressed: () {
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => AdminHomePage()));
-                },
-                child: const Text(
-                  "Admin",
-                  style: TextStyle(color: Colors.white),
-                ),
-              )),
+          
+          InkWell(
+            onTap: () {
+                Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => const AdminHomePage()));
+              },
+            child: Container(
+              height: 50.0,
+              width: MediaQuery.of(context).size.width,
+              decoration: BoxDecoration(border: Border.all(color: MyApp.primaryColor)),
+              child: const Center(
+                child:  Text(
+                    "ADMIN",
+                    style: TextStyle(fontSize: 16.0),
+                  ),
+              ),
+            ),
+          ),
           const SizedBox(height: 30.0),
-          Material(
-              elevation: 5.0,
-              borderRadius: BorderRadius.circular(15),
-              color: Colors.blueGrey,
-              child: MaterialButton(
-                minWidth: MediaQuery.of(context).size.width,
-                onPressed: () {
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => UserHomePage()));
-                },
-                child: const Text(
-                  "User",
-                  style: TextStyle(color: Colors.white),
-                ),
-              ))
+          InkWell(
+          
+            onTap: () {
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => const UserHomePage()));
+              },
+            child: Container(
+              height: 50.0,
+              width: MediaQuery.of(context).size.width,
+              decoration: BoxDecoration(border: Border.all(color: MyApp.primaryColor)),
+              child: const Center(
+                child:  Text(
+                    "USER",
+                    style: TextStyle(fontSize: 16.0),
+                  ),
+              ),
+            ),
+          )
         ]),
       ),
     );

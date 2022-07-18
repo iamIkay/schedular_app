@@ -1,12 +1,15 @@
 import 'dart:developer';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-
+import 'package:schedular_app/helper_functions.dart';
 import 'appt_model.dart';
 
-//List<Appointment> appts = [];
 final db = FirebaseFirestore.instance;
+final apptCollection = db.collection('appointments');
+const haircutColor = Colors.brown;
+const massageColor = Colors.grey;
+const manicureColor = Colors.pink;
+const pedicureColor = Colors.amber;
 
 class AdminHomePage extends StatelessWidget {
   const AdminHomePage({super.key});
@@ -14,19 +17,19 @@ class AdminHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("FCM ADMIN")),
+      appBar: AppBar(centerTitle: true, title: const Text("FCM ADMIN")),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text("Welcome Admin!",
-                style: TextStyle(fontSize: 26.0, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 30.0),
+            const Text("Schedule",
+                style: TextStyle(fontSize: 24.0, letterSpacing: 1.5)),
+            const SizedBox(height: 10.0),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text("Today:"),
+                const Text("Coming up:"),
                 TextButton(
                     child: const Text("View all",
                         style: TextStyle(
@@ -35,22 +38,19 @@ class AdminHomePage extends StatelessWidget {
                     onPressed: () {}),
               ],
             ),
-            const SizedBox(height: 15.0),
             const Schedule(),
             const SizedBox(height: 30.0),
-            /* const Text("Tomorrow:"),
-            const Schedule(), */
             Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: const [
-                  ColorIdentifier(color: Colors.brown, service: "Haircut"),
-                  ColorIdentifier(color: Colors.grey, service: "Massage"),
+                  ColorIdentifier(color: haircutColor, service: "Haircut"),
+                  ColorIdentifier(color: massageColor, service: "Massage"),
                 ]),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: const [
-                ColorIdentifier(color: Colors.pink, service: "Manicure"),
-                ColorIdentifier(color: Colors.amber, service: "Pedicure"),
+                ColorIdentifier(color: manicureColor, service: "Manicure"),
+                ColorIdentifier(color: pedicureColor, service: "Pedicure"),
               ],
             )
           ]),
@@ -68,23 +68,33 @@ class Schedule extends StatelessWidget {
     return Padding(
         padding: const EdgeInsets.only(bottom: 20.0),
         child: StreamBuilder(
-          stream: getAppointments(),
+          stream: getAppointments,
           builder: ((context, AsyncSnapshot<QuerySnapshot> snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const CircularProgressIndicator();
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.data!.docs.isEmpty) {
+              return const SizedBox(
+                height: 300.0,
+                child: Center(
+                    child: Text("You do not have any new appointments!")),
+              );
             }
 
             if (snapshot.hasData) {
               List<Appointment> appts = [];
 
               for (var doc in snapshot.data!.docs) {
-                appts.add(
-                    Appointment.fromJson(doc.data() as Map<String, dynamic>));
+                final appt =
+                    Appointment.fromJson(doc.data() as Map<String, dynamic>);
+
+                appts.add(appt);
               }
               return SizedBox(
                 height: 300.0,
                 child: ListView.builder(
-                  physics: NeverScrollableScrollPhysics(),
+                  physics: const NeverScrollableScrollPhysics(),
                   itemCount: appts.length,
                   itemBuilder: (context, index) {
                     return ScheduleCard(appts[index]);
@@ -93,23 +103,17 @@ class Schedule extends StatelessWidget {
               );
             }
 
-            return SizedBox();
+            return const SizedBox();
           }),
-        )
-
-        /*  ListView.builder(
-        itemCount: appts.length,
-        itemBuilder: (context, index) {
-          return ScheduleCard(appts[index]);
-        },
-      ), */
-        );
+        ));
   }
 }
 
-Stream<QuerySnapshot> getAppointments() {
-  return db.collection('appointments').orderBy('time').snapshots();
-}
+//Stream to get all future appointment
+final Stream<QuerySnapshot> getAppointments = apptCollection
+    .orderBy('time')
+    .where('time', isGreaterThan: Timestamp.fromDate(DateTime.now()))
+    .snapshots();
 
 class ScheduleCard extends StatelessWidget {
   final Appointment appointment;
@@ -121,70 +125,74 @@ class ScheduleCard extends StatelessWidget {
 
     switch (appointment.service) {
       case "haircut":
-        cardColor = Colors.brown;
+        cardColor = haircutColor;
         break;
       case "massage":
-        cardColor = Colors.grey;
+        cardColor = massageColor;
         break;
       case "manicure":
-        cardColor = Colors.pink;
+        cardColor = manicureColor;
         break;
       case "pedicure":
-        cardColor = Colors.amber;
+        cardColor = pedicureColor;
         break;
     }
-    return Container(
-      height: 50.0,
-      color: cardColor.withOpacity(0.5),
-      margin: const EdgeInsets.only(bottom: 10.0),
-      child: Card(
-        elevation: 10.0,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10.0),
-          child:
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            SizedBox(
-                width: 100.0,
-                child: Text(appointment.name, overflow: TextOverflow.ellipsis)),
-            Text(checkDate("${appointment.time.toLocal()}".split(' ')[0])),
-            Row(
-              children: [
-                Text("${appointment.time.toLocal()}"
-                    .split(' ')[1]
-                    .split(':')[0]),
-                const Text(':'),
-                Text("${appointment.time.toLocal()}"
-                    .split(' ')[1]
-                    .split(':')[1]),
-              ],
-            ),
-          ]),
+    return GestureDetector(
+      onTap: () {},
+      child: Container(
+        height: 50.0,
+        margin: const EdgeInsets.only(bottom: 10.0),
+        child: Card(
+          elevation: 10.0,
+          child: Padding(
+            padding: const EdgeInsets.only(right: 10.0),
+            child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  SizedBox(
+                      width: 110.0,
+                      child: Row(
+                        children: [
+                          //Service color tag
+                          Container(
+                            color: cardColor.withOpacity(0.8),
+                            width: 5.0,
+                          ),
+
+                          const SizedBox(width: 15.0),
+
+                          //Client name
+                          Expanded(
+                              child: Text(appointment.name,
+                                  overflow: TextOverflow.ellipsis)),
+                        ],
+                      )),
+
+                  //Appointmemt date
+                  Text(
+                      checkDate("${appointment.time.toLocal()}".split(' ')[0])),
+
+                  //Appointment time
+                  Row(
+                    children: [
+                      Text("${appointment.time.toLocal()}"
+                          .split(' ')[1]
+                          .split(':')[0]),
+                      const Text(':'),
+                      Text("${appointment.time.toLocal()}"
+                          .split(' ')[1]
+                          .split(':')[1]),
+                    ],
+                  ),
+                ]),
+          ),
         ),
       ),
     );
   }
 }
 
-checkDate(date) {
-  DateTime now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
-  final tomorrow = DateTime(now.year, now.month, now.day+1);
-
-  DateTime dateConvert = DateTime.parse(date);
-  final checkDate =
-      DateTime(dateConvert.year, dateConvert.month, dateConvert.day);
-
-  if (checkDate == today) {
-    return "Today";
-  }
-
-  if (checkDate == tomorrow) {
-    return "Tomorrow";
-  }
-
-  return date;
-}
-
+//Color Identify table
 class ColorIdentifier extends StatelessWidget {
   final service;
   final color;
@@ -192,18 +200,21 @@ class ColorIdentifier extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Row(
-        children: [
-          Container(
-            height: 30,
-            width: 30,
-            color: color.withOpacity(0.5),
-          ),
-          const SizedBox(width: 20.0),
-          Text(service)
-        ],
+    return SizedBox(
+      width: 150.0,
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Row(
+          children: [
+            Container(
+              height: 30,
+              width: 30,
+              color: color.withOpacity(0.8),
+            ),
+            const SizedBox(width: 20.0),
+            Expanded(child: Text(service))
+          ],
+        ),
       ),
     );
   }

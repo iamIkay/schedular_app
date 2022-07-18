@@ -5,8 +5,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:schedular_app/appt_model.dart';
+import 'package:schedular_app/main.dart';
 
-final appt_db = FirebaseFirestore.instance; //Initialize firestore
+import 'admin_screen.dart';
+
+String _user = "";
 
 class UserHomePage extends StatefulWidget {
   const UserHomePage({super.key});
@@ -23,10 +26,11 @@ class _UserHomePageState extends State<UserHomePage> {
   final _serviceList = ["Haircut", "Massage", "Manicure", "Pedicure"];
 
   final _nameController = TextEditingController();
+  final _searchController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
-    final textField = Container(
+    final nameField = Container(
         decoration: BoxDecoration(
           border: Border.all(width: 1.0, color: Colors.grey.shade300),
           borderRadius: BorderRadius.circular(10.0),
@@ -40,6 +44,22 @@ class _UserHomePageState extends State<UserHomePage> {
               prefixIcon: Icon(Icons.person),
               contentPadding: EdgeInsets.fromLTRB(20, 15, 20, 15),
               hintText: "Name",
+              border: InputBorder.none),
+        ));
+
+    final searchField = Container(
+        height: 50.0,
+        decoration: BoxDecoration(
+          border: Border.all(width: 1.0, color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+        child: TextFormField(
+          autofocus: false,
+          controller: _searchController,
+          decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.search),
+              contentPadding: EdgeInsets.fromLTRB(20, 15, 20, 15),
+              hintText: "Search for",
               border: InputBorder.none),
         ));
 
@@ -62,9 +82,8 @@ class _UserHomePageState extends State<UserHomePage> {
           isExpanded: true,
           value: _service,
           onChanged: (newValue) {
-
             setState(() {
-              _service = newValue.toString().toLowerCase();
+              _service = newValue.toString();
             });
           },
           items: _serviceList.map((valueItem) {
@@ -79,7 +98,7 @@ class _UserHomePageState extends State<UserHomePage> {
       child: SizedBox(
         height: 220.0,
         child: CupertinoDatePicker(
-          minimumDate: DateTime.now(),
+            initialDateTime: DateTime.now(),
             onDateTimeChanged: ((value) => setState(() {
                   date = value;
                 }))),
@@ -110,10 +129,15 @@ class _UserHomePageState extends State<UserHomePage> {
       ],
     );
 
+    final txtHeader = Center(
+        child: Text("BOOK APPOINTMENT",
+            style: TextStyle(fontSize: 24.0, letterSpacing: 1.5)));
+
     final btnShowDate = Material(
         // elevation: 5.0,
-        color: Colors.amber,
+        color: Colors.transparent,
         child: MaterialButton(
+          padding: EdgeInsets.zero,
           onPressed: () {
             setState(() {
               showDate = !showDate;
@@ -124,10 +148,12 @@ class _UserHomePageState extends State<UserHomePage> {
             children: const [
               Text(
                 "Say when",
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(
+                    color: MyApp.primaryColor,
+                    decoration: TextDecoration.underline),
               ),
               SizedBox(width: 10.0),
-              Icon(Icons.alarm, color: Colors.white)
+              Icon(Icons.alarm, color: MyApp.primaryColor)
             ],
           ),
         ));
@@ -135,15 +161,18 @@ class _UserHomePageState extends State<UserHomePage> {
     final btnSubmit = Material(
         elevation: 5.0,
         borderRadius: BorderRadius.circular(15),
-        color: Colors.green,
+        color: MyApp.primaryColor,
         child: MaterialButton(
           minWidth: MediaQuery.of(context).size.width,
           onPressed: () {
             if (_nameController.text.isNotEmpty && _service != null) {
               bookSession(
-                  name: _nameController.text, service: _service, time: date);
+                  name: _nameController.text,
+                  service: _service!.toLowerCase(),
+                  time: date);
 
               setState(() {
+                _user = _nameController.text;
                 _nameController.clear();
                 _service = null;
               });
@@ -157,9 +186,27 @@ class _UserHomePageState extends State<UserHomePage> {
           ),
         ));
 
+    final btnSearch = Material(
+        elevation: 5.0,
+        borderRadius: BorderRadius.circular(15),
+        color: MyApp.primaryColor,
+        child: MaterialButton(
+          onPressed: () {
+            if (_searchController.text.isNotEmpty) {
+              setState(() {
+                _user = _searchController.text;
+              });
+            }
+          },
+          child: const Text(
+            "Search",
+            style: TextStyle(color: Colors.white),
+          ),
+        ));
+
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      appBar: AppBar(title: const Text("FCM USER")),
+      appBar: AppBar(centerTitle: true, title: const Text("FCM USER")),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: SingleChildScrollView(
@@ -168,7 +215,9 @@ class _UserHomePageState extends State<UserHomePage> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              textField,
+              txtHeader,
+              const SizedBox(height: 20.0),
+              nameField,
               const SizedBox(height: 30.0),
               serviceDropDown,
               const SizedBox(height: 30.0),
@@ -177,7 +226,18 @@ class _UserHomePageState extends State<UserHomePage> {
               btnShowDate,
               const SizedBox(height: 60.0),
               btnSubmit,
-              const SizedBox(height: 30.0),
+              const SizedBox(height: 0.0),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(child: searchField),
+                  const SizedBox(width: 20.0),
+                  btnSearch
+                ],
+              ),
+              const SizedBox(height: 20.0),
+              GetMyAppointments(user: _user),
+              const SizedBox(height: 30.0)
             ],
           ),
         ),
@@ -188,7 +248,68 @@ class _UserHomePageState extends State<UserHomePage> {
 
 bookSession({name, service, time}) async {
   Appointment appt = Appointment(name: name, time: time, service: service);
-  await appt_db.collection('appointments').add(appt.toJson());
+  await apptCollection.add(appt.toJson());
 
   log("Appointment Booked Successfully!");
+}
+
+class GetMyAppointments extends StatelessWidget {
+  final String user;
+  const GetMyAppointments({required this.user, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+        height: 300.0,
+        padding: const EdgeInsets.only(bottom: 20.0),
+        child: StreamBuilder(
+          stream: getMyAppointments(user),
+          builder: ((context, AsyncSnapshot<QuerySnapshot> snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.data == null) {
+              return SizedBox();
+            }
+
+            if (snapshot.data!.docs.isEmpty) {
+              return SizedBox(
+                child: Center(
+                    child:
+                        Text("You haven't booked any appointment for $_user!")),
+              );
+            }
+
+            if (snapshot.hasData) {
+              List<Appointment> appts = [];
+
+              for (var doc in snapshot.data!.docs) {
+                final appt =
+                    Appointment.fromJson(doc.data() as Map<String, dynamic>);
+
+                appts.add(appt);
+              }
+
+              log("Number: ${appts.length}");
+              return ListView.builder(
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: appts.length,
+                itemBuilder: (context, index) {
+                  return ScheduleCard(appts[index]);
+                },
+              );
+            }
+
+            return const SizedBox();
+          }),
+        ));
+  }
+}
+
+getMyAppointments(String user) {
+  if (user.isEmpty) {
+    return null;
+  }
+  return apptCollection.where('name', isEqualTo: _user).snapshots();
 }
