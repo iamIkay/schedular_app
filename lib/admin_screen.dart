@@ -1,6 +1,7 @@
 import 'dart:developer';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:schedular_app/helper_functions.dart';
 import 'appt_model.dart';
 
@@ -111,8 +112,7 @@ class Schedule extends StatelessWidget {
 
 //Stream to get all future appointment
 final Stream<QuerySnapshot> getAppointments = apptCollection
-    .orderBy('time')
-    .where('time', isGreaterThan: Timestamp.fromDate(DateTime.now()))
+    .where('time', isGreaterThan: Timestamp.now())
     .snapshots();
 
 class ScheduleCard extends StatelessWidget {
@@ -123,7 +123,7 @@ class ScheduleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     var cardColor;
 
-    switch (appointment.service) {
+    switch (appointment.service.toLowerCase()) {
       case "haircut":
         cardColor = haircutColor;
         break;
@@ -137,6 +137,7 @@ class ScheduleCard extends StatelessWidget {
         cardColor = pedicureColor;
         break;
     }
+
     return GestureDetector(
       onTap: () {},
       child: Container(

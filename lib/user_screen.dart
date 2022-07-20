@@ -1,15 +1,17 @@
 import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:schedular_app/appt_model.dart';
 import 'package:schedular_app/main.dart';
 
 import 'admin_screen.dart';
 
 String _user = "";
+bool _editForm = false;
+String _editApptId = "";
 
 class UserHomePage extends StatefulWidget {
   const UserHomePage({super.key});
@@ -20,7 +22,7 @@ class UserHomePage extends StatefulWidget {
 
 class _UserHomePageState extends State<UserHomePage> {
   String? _service;
-  DateTime date = DateTime.now();
+  DateTime time = DateTime.now();
   bool showDate = false;
 
   final _serviceList = ["Haircut", "Massage", "Manicure", "Pedicure"];
@@ -100,7 +102,7 @@ class _UserHomePageState extends State<UserHomePage> {
         child: CupertinoDatePicker(
             initialDateTime: DateTime.now(),
             onDateTimeChanged: ((value) => setState(() {
-                  date = value;
+                  time = value;
                 }))),
       ),
     );
@@ -112,7 +114,7 @@ class _UserHomePageState extends State<UserHomePage> {
           children: [
             const Text("Date: ", style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(width: 10.0),
-            Text("${date.toLocal()}".split(' ')[0]),
+            Text("${time.toLocal()}".split(' ')[0]),
           ],
         ),
         const SizedBox(height: 20.0),
@@ -120,21 +122,20 @@ class _UserHomePageState extends State<UserHomePage> {
           children: [
             const Text("Time: ", style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(width: 10.0),
-            Text("${date.toLocal()}".split(' ')[1].split(':')[0]),
+            Text("${time.toLocal()}".split(' ')[1].split(':')[0]),
             const Text(':'),
-            Text("${date.toLocal()}".split(' ')[1].split(':')[1]),
+            Text("${time.toLocal()}".split(' ')[1].split(':')[1]),
           ],
         ),
         const SizedBox(height: 15.0),
       ],
     );
 
-    final txtHeader = Center(
+    const txtHeader = Center(
         child: Text("BOOK APPOINTMENT",
             style: TextStyle(fontSize: 24.0, letterSpacing: 1.5)));
 
     final btnShowDate = Material(
-        // elevation: 5.0,
         color: Colors.transparent,
         child: MaterialButton(
           padding: EdgeInsets.zero,
@@ -166,23 +167,27 @@ class _UserHomePageState extends State<UserHomePage> {
           minWidth: MediaQuery.of(context).size.width,
           onPressed: () {
             if (_nameController.text.isNotEmpty && _service != null) {
-              bookSession(
-                  name: _nameController.text,
-                  service: _service!.toLowerCase(),
-                  time: date);
-
+              !_editForm
+                  ? bookSession(
+                      name: _nameController.text, service: _service, time: time)
+                  : updateAppointment(Appointment(
+                      name: _nameController.text,
+                      service: _service!,
+                      time: time,
+                      id: _editApptId));
               setState(() {
                 _user = _nameController.text;
                 _nameController.clear();
                 _service = null;
+                time = DateTime.now();
               });
             } else {
               log("Please enter all fields!");
             }
           },
-          child: const Text(
-            "Book",
-            style: TextStyle(color: Colors.white),
+          child: Text(
+            !_editForm ? "Book" : "Update",
+            style: const TextStyle(color: Colors.white),
           ),
         ));
 
@@ -204,6 +209,16 @@ class _UserHomePageState extends State<UserHomePage> {
           ),
         ));
 
+    void editAppointment(Appointment appt) {
+      setState(() {
+        _nameController.text = appt.name;
+        _service = appt.service;
+        time = appt.time;
+        _editForm = true;
+        _editApptId = appt.id;
+      });
+    }
+
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(centerTitle: true, title: const Text("FCM USER")),
@@ -211,8 +226,6 @@ class _UserHomePageState extends State<UserHomePage> {
         padding: const EdgeInsets.all(20.0),
         child: SingleChildScrollView(
           child: Column(
-            // mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               txtHeader,
@@ -226,7 +239,7 @@ class _UserHomePageState extends State<UserHomePage> {
               btnShowDate,
               const SizedBox(height: 60.0),
               btnSubmit,
-              const SizedBox(height: 0.0),
+              const SizedBox(height: 30.0),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -236,8 +249,8 @@ class _UserHomePageState extends State<UserHomePage> {
                 ],
               ),
               const SizedBox(height: 20.0),
-              GetMyAppointments(user: _user),
-              const SizedBox(height: 30.0)
+              GetMyAppointments(user: _user, update: editAppointment),
+              const SizedBox(height: 30.0),
             ],
           ),
         ),
@@ -247,15 +260,36 @@ class _UserHomePageState extends State<UserHomePage> {
 }
 
 bookSession({name, service, time}) async {
-  Appointment appt = Appointment(name: name, time: time, service: service);
-  await apptCollection.add(appt.toJson());
+  final docRef = apptCollection.doc();
+  Appointment appt =
+      Appointment(name: name, time: time, service: service, id: docRef.id);
 
-  log("Appointment Booked Successfully!");
+  await docRef.set(appt.toJson()).then(
+      (value) => log("Appointment booked successfully!"),
+      onError: (e) => log("Error booking appointment: $e"));
+}
+
+void updateAppointment(appt) {
+  //Set updated data for selected appointment
+  apptCollection.doc(appt.id).set(appt.toJson()).then(
+      (value) => log("Appointment updated Successfully!"),
+      onError: (e) => log("Error updating appointment: $e"));
+
+  _editForm = false;
+}
+
+void deleteAppointment(appt) {
+  //Delete selected appointment
+  apptCollection.doc(appt.id).delete().then(
+      (value) => log("Appointment deleted successfully!"),
+      onError: (e) => "Error deleting appointment: $e");
 }
 
 class GetMyAppointments extends StatelessWidget {
   final String user;
-  const GetMyAppointments({required this.user, super.key});
+  final ValueChanged<Appointment> update;
+  const GetMyAppointments(
+      {required this.user, required this.update, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -291,12 +325,11 @@ class GetMyAppointments extends StatelessWidget {
                 appts.add(appt);
               }
 
-              log("Number: ${appts.length}");
               return ListView.builder(
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: appts.length,
                 itemBuilder: (context, index) {
-                  return ScheduleCard(appts[index]);
+                  return UserScheduleCard(appts[index], update: update);
                 },
               );
             }
@@ -312,4 +345,40 @@ getMyAppointments(String user) {
     return null;
   }
   return apptCollection.where('name', isEqualTo: _user).snapshots();
+}
+
+class UserScheduleCard extends StatelessWidget {
+  final Appointment appointment;
+  final ValueChanged<Appointment> update;
+  const UserScheduleCard(this.appointment, {required this.update, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Slidable(
+        startActionPane: ActionPane(
+          motion: const ScrollMotion(),
+          children: [
+            SlidableAction(
+              onPressed: (context) => update(appointment),
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+              icon: Icons.edit,
+              label: 'Edit',
+            ),
+          ],
+        ),
+        endActionPane: ActionPane(
+          motion: ScrollMotion(),
+          children: [
+            SlidableAction(
+              onPressed: (context) => deleteAppointment(appointment),
+              backgroundColor: Color(0xFFFE4A49),
+              foregroundColor: Colors.white,
+              icon: Icons.delete,
+              label: 'Delete',
+            ),
+          ],
+        ),
+        child: ScheduleCard(appointment));
+  }
 }
