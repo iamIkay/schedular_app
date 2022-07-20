@@ -304,7 +304,7 @@ class GetMyAppointments extends StatelessWidget {
             }
 
             if (snapshot.data == null) {
-              return SizedBox();
+              return const SizedBox();
             }
 
             if (snapshot.data!.docs.isEmpty) {
@@ -368,11 +368,11 @@ class UserScheduleCard extends StatelessWidget {
           ],
         ),
         endActionPane: ActionPane(
-          motion: ScrollMotion(),
+          motion: const ScrollMotion(),
           children: [
             SlidableAction(
               onPressed: (context) => deleteAppointment(appointment),
-              backgroundColor: Color(0xFFFE4A49),
+              backgroundColor: const Color(0xFFFE4A49),
               foregroundColor: Colors.white,
               icon: Icons.delete,
               label: 'Delete',
