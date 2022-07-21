@@ -132,8 +132,7 @@ class _UserHomePageState extends State<UserHomePage> {
     );
 
     const txtHeader = Center(
-        child: Text("BOOK APPOINTMENT",
-            style: TextStyle(fontSize: 24.0, letterSpacing: 1.5)));
+        child: Text("Book Appointment", style: TextStyle(fontSize: 24.0)));
 
     final btnShowDate = Material(
         color: Colors.transparent,
@@ -219,39 +218,42 @@ class _UserHomePageState extends State<UserHomePage> {
       });
     }
 
-    return Scaffold(
-      resizeToAvoidBottomInset: true,
-      appBar: AppBar(centerTitle: true, title: const Text("FCM USER")),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              txtHeader,
-              const SizedBox(height: 20.0),
-              nameField,
-              const SizedBox(height: 30.0),
-              serviceDropDown,
-              const SizedBox(height: 30.0),
-              selectedDateAndTime,
-              datePicker,
-              btnShowDate,
-              const SizedBox(height: 60.0),
-              btnSubmit,
-              const SizedBox(height: 30.0),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(child: searchField),
-                  const SizedBox(width: 20.0),
-                  btnSearch
-                ],
-              ),
-              const SizedBox(height: 20.0),
-              GetMyAppointments(user: _user, update: editAppointment),
-              const SizedBox(height: 30.0),
-            ],
+    return SafeArea(
+      top: false,
+      child: Scaffold(
+        resizeToAvoidBottomInset: true,
+        appBar: AppBar(),
+        body: SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                txtHeader,
+                const SizedBox(height: 20.0),
+                nameField,
+                const SizedBox(height: 30.0),
+                serviceDropDown,
+                const SizedBox(height: 30.0),
+                selectedDateAndTime,
+                datePicker,
+                btnShowDate,
+                const SizedBox(height: 60.0),
+                btnSubmit,
+                const SizedBox(height: 20.0),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(child: searchField),
+                    const SizedBox(width: 20.0),
+                    btnSearch
+                  ],
+                ),
+                const SizedBox(height: 20.0),
+                GetMyAppointments(user: _user, update: editAppointment),
+              ],
+            ),
           ),
         ),
       ),
@@ -293,9 +295,8 @@ class GetMyAppointments extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
         height: 300.0,
-        padding: const EdgeInsets.only(bottom: 20.0),
         child: StreamBuilder(
           stream: getMyAppointments(user),
           builder: ((context, AsyncSnapshot<QuerySnapshot> snapshot) {
@@ -326,7 +327,6 @@ class GetMyAppointments extends StatelessWidget {
               }
 
               return ListView.builder(
-                physics: const NeverScrollableScrollPhysics(),
                 itemCount: appts.length,
                 itemBuilder: (context, index) {
                   return UserScheduleCard(appts[index], update: update);

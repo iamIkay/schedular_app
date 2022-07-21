@@ -2,12 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:schedular_app/helper_functions.dart';
 import 'appt_model.dart';
+import 'main.dart';
 
 final db = FirebaseFirestore.instance;
 final apptCollection = db.collection('appointments');
 const haircutColor = Colors.brown;
-const massageColor = Colors.grey;
-const manicureColor = Colors.pink;
+const massageColor = Colors.green;
+const manicureColor = Colors.blue;
 const pedicureColor = Colors.amber;
 
 class AdminHomePage extends StatelessWidget {
@@ -16,43 +17,70 @@ class AdminHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(centerTitle: true, title: const Text("FCM ADMIN")),
+      appBar: AppBar(backgroundColor: MyApp.primaryColor, elevation: 0.0),
       body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text("Schedule",
-                style: TextStyle(fontSize: 24.0, letterSpacing: 1.5)),
-            const SizedBox(height: 10.0),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text("Coming up:"),
-                TextButton(
-                    child: const Text("View all",
-                        style: TextStyle(
-                            decoration: TextDecoration.underline,
-                            color: Colors.grey)),
-                    onPressed: () {}),
-              ],
+        child: Stack(
+          children: [
+            Container(
+              height: 200.0,
+              decoration: const BoxDecoration(
+                  color: MyApp.primaryColor,
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(30.0),
+                    bottomRight: Radius.circular(30.0),
+                  )),
             ),
-            const Schedule(),
-            const SizedBox(height: 30.0),
-            Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  ColorIdentifier(color: haircutColor, service: "Haircut"),
-                  ColorIdentifier(color: massageColor, service: "Massage"),
-                ]),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
-                ColorIdentifier(color: manicureColor, service: "Manicure"),
-                ColorIdentifier(color: pedicureColor, service: "Pedicure"),
-              ],
-            )
-          ]),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 20.0),
+                    const Text("Welcome Admin,",
+                        style: TextStyle(
+                            fontSize: 24.0,
+                            letterSpacing: 1.5,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white)),
+                    const SizedBox(height: 10.0),
+                    const Text("Here are your upcoming appointments",
+                        style: TextStyle(fontSize: 16.0, color: Colors.white)),
+                    const SizedBox(height: 20.0),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                          child: const Text(
+                            "View all",
+                            style: TextStyle(
+                                decoration: TextDecoration.underline,
+                                color: Colors.white70),
+                          ),
+                          onPressed: () {
+                       
+                          }),
+                    ),
+                    const Schedule(),
+                    const SizedBox(height: 30.0),
+                    Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: const [
+                          ColorIdentifier(
+                              color: haircutColor, service: "Haircut"),
+                          ColorIdentifier(
+                              color: massageColor, service: "Massage"),
+                        ]),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: const [
+                        ColorIdentifier(
+                            color: manicureColor, service: "Manicure"),
+                        ColorIdentifier(
+                            color: pedicureColor, service: "Pedicure"),
+                      ],
+                    )
+                  ]),
+            ),
+          ],
         ),
       ),
     );
@@ -109,9 +137,8 @@ class Schedule extends StatelessWidget {
 }
 
 //Stream to get all future appointment
-final Stream<QuerySnapshot> getAppointments = apptCollection
-    .where('time', isGreaterThan: Timestamp.now())
-    .snapshots();
+final Stream<QuerySnapshot> getAppointments =
+    apptCollection.where('time', isGreaterThan: Timestamp.now()).snapshots();
 
 class ScheduleCard extends StatelessWidget {
   final Appointment appointment;

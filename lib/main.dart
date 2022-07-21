@@ -15,14 +15,14 @@ Future<void> main() async {
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
-  static const primaryColor = Colors.blueGrey;
+  static const primaryColor = Colors.orange;
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: ThemeData(
-        primarySwatch: primaryColor,
+        primarySwatch: primaryColor
       ),
       home: const LoginPage(),
     );
