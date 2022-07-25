@@ -36,6 +36,7 @@ Runner/GeneratedPluginRegistrant.*
 # Google Services (ex. APIs and Firebase)
 google-services.json
 GoogleService-Info.plist
+firebase_app_id_file.json
 
 # Firebase Hosting
 .firebaserc

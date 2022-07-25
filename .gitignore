@@ -55,3 +55,4 @@ GoogleService-Info.plist
 .firebaserc
 firebase-debug.log
 
+*firebase_options.dart
