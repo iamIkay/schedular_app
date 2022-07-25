@@ -34,6 +34,7 @@ migrate_working_dir/
 
 # Web related
 lib/generated_plugin_registrant.dart
+web/firebase-config.js
 
 # Symbolication related
 app.*.symbols
@@ -45,3 +46,12 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Google Services (ex. APIs and Firebase)
+google-services.json
+GoogleService-Info.plist
+
+# Firebase Hosting
+.firebaserc
+firebase-debug.log
+
