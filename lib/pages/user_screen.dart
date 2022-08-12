@@ -1,6 +1,6 @@
 import 'dart:developer';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -8,6 +8,7 @@ import 'package:schedular_app/appt_model.dart';
 import 'package:schedular_app/main.dart';
 
 import 'admin_screen.dart';
+import '../helper_functions.dart';
 
 String _user = "";
 bool _editForm = false;
@@ -20,7 +21,21 @@ class UserHomePage extends StatefulWidget {
   State<UserHomePage> createState() => _UserHomePageState();
 }
 
+initializeUserToken() async {
+  await FirebaseMessaging.instance.getToken().then((token) {
+    apptCollection.doc("tokens").update({'user-token': token});
+  });
+}
+
 class _UserHomePageState extends State<UserHomePage> {
+  //Update User token on Login
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    initializeUserToken();
+  }
+
   String? _service;
   DateTime time = DateTime.now();
   bool showDate = false;
@@ -32,6 +47,12 @@ class _UserHomePageState extends State<UserHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    var args =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+    if (args != null) {
+      _user = args['name'];
+    }
+
     final nameField = Container(
         decoration: BoxDecoration(
           border: Border.all(width: 1.0, color: Colors.grey.shade300),
@@ -122,9 +143,7 @@ class _UserHomePageState extends State<UserHomePage> {
           children: [
             const Text("Time: ", style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(width: 10.0),
-            Text("${time.toLocal()}".split(' ')[1].split(':')[0]),
-            const Text(':'),
-            Text("${time.toLocal()}".split(' ')[1].split(':')[1]),
+            Text(getTime(time.toLocal())),
           ],
         ),
         const SizedBox(height: 15.0),
@@ -166,13 +185,20 @@ class _UserHomePageState extends State<UserHomePage> {
           minWidth: MediaQuery.of(context).size.width,
           onPressed: () {
             if (_nameController.text.isNotEmpty && _service != null) {
+              Appointment appt = Appointment(
+                  name: _nameController.text,
+                  service: _service!,
+                  status: "pending",
+                  time: time);
+
+              //If Form is in Edit state, call updateAppointment() on Button click if not, call bookSession()
               !_editForm
-                  ? bookSession(
-                      name: _nameController.text, service: _service, time: time)
+                  ? bookSession(appointment: appt)
                   : updateAppointment(Appointment(
                       name: _nameController.text,
                       service: _service!,
                       time: time,
+                      status: "pending",
                       id: _editApptId));
               setState(() {
                 _user = _nameController.text;
@@ -214,46 +240,43 @@ class _UserHomePageState extends State<UserHomePage> {
         _service = appt.service;
         time = appt.time;
         _editForm = true;
-        _editApptId = appt.id;
+        _editApptId = appt.id!;
       });
     }
 
-    return SafeArea(
-      top: false,
-      child: Scaffold(
-        resizeToAvoidBottomInset: true,
-        appBar: AppBar(),
-        body: SingleChildScrollView(
-          physics: const ClampingScrollPhysics(),
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                txtHeader,
-                const SizedBox(height: 20.0),
-                nameField,
-                const SizedBox(height: 30.0),
-                serviceDropDown,
-                const SizedBox(height: 30.0),
-                selectedDateAndTime,
-                datePicker,
-                btnShowDate,
-                const SizedBox(height: 60.0),
-                btnSubmit,
-                const SizedBox(height: 20.0),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(child: searchField),
-                    const SizedBox(width: 20.0),
-                    btnSearch
-                  ],
-                ),
-                const SizedBox(height: 20.0),
-                GetMyAppointments(user: _user, update: editAppointment),
-              ],
-            ),
+    return Scaffold(
+      resizeToAvoidBottomInset: true,
+      appBar: AppBar(),
+      body: SingleChildScrollView(
+        physics: const ClampingScrollPhysics(),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              txtHeader,
+              const SizedBox(height: 20.0),
+              nameField,
+              const SizedBox(height: 30.0),
+              serviceDropDown,
+              const SizedBox(height: 30.0),
+              selectedDateAndTime,
+              datePicker,
+              btnShowDate,
+              const SizedBox(height: 60.0),
+              btnSubmit,
+              const SizedBox(height: 20.0),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(child: searchField),
+                  const SizedBox(width: 20.0),
+                  btnSearch
+                ],
+              ),
+              const SizedBox(height: 20.0),
+              GetMyAppointments(user: _user, update: editAppointment),
+            ],
           ),
         ),
       ),
@@ -261,14 +284,21 @@ class _UserHomePageState extends State<UserHomePage> {
   }
 }
 
-bookSession({name, service, time}) async {
+bookSession({required Appointment appointment}) async {
   final docRef = apptCollection.doc();
-  Appointment appt =
-      Appointment(name: name, time: time, service: service, id: docRef.id);
+  Appointment appt = Appointment(
+      name: appointment.name,
+      time: appointment.time,
+      service: appointment.service,
+      status: "pending",
+      id: docRef.id);
 
   await docRef.set(appt.toJson()).then(
       (value) => log("Appointment booked successfully!"),
       onError: (e) => log("Error booking appointment: $e"));
+
+  //Send Notifcation to Admin after Booking Session
+  await sendNotificationToAdmin(appointment: appt);
 }
 
 void updateAppointment(appt) {

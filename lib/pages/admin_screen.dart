@@ -1,8 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:schedular_app/helper_functions.dart';
-import 'appt_model.dart';
-import 'main.dart';
+import '../appt_model.dart';
+import '../main.dart';
 
 final db = FirebaseFirestore.instance;
 final apptCollection = db.collection('appointments');
@@ -11,13 +12,32 @@ const massageColor = Colors.green;
 const manicureColor = Colors.blue;
 const pedicureColor = Colors.amber;
 
-class AdminHomePage extends StatelessWidget {
+class AdminHomePage extends StatefulWidget {
   const AdminHomePage({super.key});
+
+  @override
+  State<AdminHomePage> createState() => _AdminHomePageState();
+}
+
+initializeAdminToken() async {
+  await FirebaseMessaging.instance.getToken().then((token) {
+    apptCollection.doc("tokens").update({'admin-token': token});
+  });
+}
+
+class _AdminHomePageState extends State<AdminHomePage> {
+  //Update Admin token on Login
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    initializeAdminToken();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(backgroundColor: MyApp.primaryColor, elevation: 0.0),
+      appBar: AppBar(elevation: 0.0),
       body: SingleChildScrollView(
         child: Stack(
           children: [
@@ -55,9 +75,7 @@ class AdminHomePage extends StatelessWidget {
                                 decoration: TextDecoration.underline,
                                 color: Colors.white70),
                           ),
-                          onPressed: () {
-                       
-                          }),
+                          onPressed: () {}),
                     ),
                     const Schedule(),
                     const SizedBox(height: 30.0),
@@ -124,7 +142,10 @@ class Schedule extends StatelessWidget {
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: appts.length,
                   itemBuilder: (context, index) {
-                    return ScheduleCard(appts[index]);
+                    return GestureDetector(
+                        onTap: () => Navigator.of(context)
+                            .pushNamed('/details', arguments: appts[index]),
+                        child: ScheduleCard(appts[index]));
                   },
                 ),
               );
@@ -136,9 +157,14 @@ class Schedule extends StatelessWidget {
   }
 }
 
-//Stream to get all future appointment
-final Stream<QuerySnapshot> getAppointments =
-    apptCollection.where('time', isGreaterThan: Timestamp.now()).snapshots();
+//Stream to get all appointments from today
+DateTime now = DateTime.now();
+DateTime today = DateTime(now.year, now.month, now.day);
+
+final Stream<QuerySnapshot> getAppointments = apptCollection
+    .orderBy('time')
+    .where('time', isGreaterThanOrEqualTo: Timestamp.fromDate(today))
+    .snapshots();
 
 class ScheduleCard extends StatelessWidget {
   final Appointment appointment;
@@ -162,57 +188,64 @@ class ScheduleCard extends StatelessWidget {
         cardColor = pedicureColor;
         break;
     }
+    
+    return Container(
+      height: 50.0,
+      margin: const EdgeInsets.only(bottom: 10.0),
 
-    return GestureDetector(
-      onTap: () {},
-      child: Container(
-        height: 50.0,
-        margin: const EdgeInsets.only(bottom: 10.0),
-        child: Card(
-          elevation: 10.0,
-          child: Padding(
-            padding: const EdgeInsets.only(right: 10.0),
-            child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  SizedBox(
-                      width: 110.0,
-                      child: Row(
-                        children: [
-                          //Service color tag
-                          Container(
-                            color: cardColor.withOpacity(0.8),
-                            width: 5.0,
-                          ),
+      //width: MediaQuery.of(context).size.width,
+      child: Row(
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          //Service color tag
+          Container(
+            color: cardColor.withOpacity(0.8),
+            width: 5.0,
+          ),
 
-                          const SizedBox(width: 15.0),
-
-                          //Client name
-                          Expanded(
-                              child: Text(appointment.name,
-                                  overflow: TextOverflow.ellipsis)),
-                        ],
-                      )),
-
-                  //Appointmemt date
-                  Text(
-                      checkDate("${appointment.time.toLocal()}".split(' ')[0])),
-
-                  //Appointment time
-                  Row(
+          Expanded(
+            child: SizedBox(
+              height: 50.0,
+              child: Card(
+                elevation: 5.0,
+                margin: EdgeInsets.zero,
+                child: Padding(
+                  padding:
+                      const EdgeInsets.only(right: 10.0, top: 10.0, left: 5.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      Text("${appointment.time.toLocal()}"
-                          .split(' ')[1]
-                          .split(':')[0]),
-                      const Text(':'),
-                      Text("${appointment.time.toLocal()}"
-                          .split(' ')[1]
-                          .split(':')[1]),
+                      Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            SizedBox(
+                                width: 110.0,
+                                child: Text(appointment.name,
+                                    overflow: TextOverflow.ellipsis)),
+
+                            //Appointmemt date
+                            Text(checkDate(appointment.time)),
+
+                            //Appointment time
+                            Text(getTime(appointment.time)),
+                          ]),
+                      Text(
+                        appointment.status,
+                        style: TextStyle(
+                            fontSize: 12.0,
+                            color: appointment.status == 'pending'
+                                ? Colors.red
+                                : Colors.green,
+                            fontWeight: FontWeight.bold),
+                      )
                     ],
                   ),
-                ]),
+                ),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

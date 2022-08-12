@@ -56,3 +56,7 @@ GoogleService-Info.plist
 firebase-debug.log
 
 *firebase_options.dart
+
+#.env file
+.env
+
