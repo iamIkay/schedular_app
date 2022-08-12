@@ -95,8 +95,9 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   _mapMessageToUser(RemoteMessage message) {
+    Map<String, dynamic> json = message.data;
+    
     if (message.data['service'] != null) {
-      Map<String, dynamic> json = message.data;
       Appointment appt = Appointment(
           name: json['name'],
           time: DateTime.parse(json['time']),
@@ -105,7 +106,7 @@ class _LoginPageState extends State<LoginPage> {
           id: json['id']);
       Navigator.of(context).pushNamed('/details', arguments: appt);
     } else {
-      Navigator.of(context).pushNamed('/user', arguments: message.data);
+      Navigator.of(context).pushNamed('/user', arguments: json);
     }
   }
 
